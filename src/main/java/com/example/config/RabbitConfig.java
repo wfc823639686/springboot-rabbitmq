@@ -12,6 +12,8 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Arrays;
+
 @Configuration
 public class RabbitConfig implements RabbitTemplate.ReturnCallback, RabbitTemplate.ConfirmCallback {
 
@@ -40,17 +42,20 @@ public class RabbitConfig implements RabbitTemplate.ReturnCallback, RabbitTempla
         return template;
     }
 
+    // 实现ReturnCallback
+    // 当消息发送出去找不到对应路由队列时，将会把消息退回
+    // 如果有任何一个路由队列接收投递消息成功，则不会退回消息
     @Override
     public void returnedMessage(Message message, int i, String s, String s1, String s2) {
-        log.info("sender return success" + message.toString() + "===" + i + "===" + s1 + "===" + s2);
+        log.error("消息发送失败: " + Arrays.toString(message.getBody()));
     }
 
+    // 实现ConfirmCallback
+    // ACK=true仅仅标示消息已被Broker接收到，并不表示已成功投放至消息队列中
+    // ACK=false标示消息由于Broker处理错误，消息并未处理成功
     @Override
     public void confirm(CorrelationData correlationData, boolean ack, String cause) {
-        if (!ack) {
-            log.error("HelloSender消息发送失败" + cause + correlationData.toString());
-        } else {
-            log.info("HelloSender 消息发送成功 ");
-        }
+        log.info("消息id: " + correlationData + "确认" + (ack ? "成功:" : "失败"));
+
     }
 }
